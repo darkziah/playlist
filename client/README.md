@@ -52,3 +52,41 @@ export default tseslint.config({
   },
 })
 ```
+
+---
+
+## Game scheduling feature
+
+This client implements a Firestore-backed game scheduling and roster flow.
+
+### Firebase configuration
+
+Set the following environment variables in `client/.env`:
+
+- `VITE_FIREBASE_API_KEY`
+- `VITE_FIREBASE_AUTH_DOMAIN`
+- `VITE_FIREBASE_PROJECT_ID`
+- `VITE_FIREBASE_STORAGE_BUCKET`
+- `VITE_FIREBASE_MESSAGING_SENDER_ID`
+- `VITE_FIREBASE_APP_ID`
+
+Firestore collections used:
+
+- `games` – stores each scheduled game (title, description, `dateTime`, `maxPlayers`, `price`, `status`, `filledSlots`, timestamps).
+- `games/{gameId}/gameRosters` – roster entries for each game (`name`, optional `notes`, `queueNumber`, `createdAt`).
+
+The client expects security rules that:
+
+- Allow trusted game masters to create and update documents in `games`.
+- Allow players to **append** roster entries in `gameRosters` but not overwrite others.
+- Enforce `filledSlots <= maxPlayers` when joining (the client also enforces this via a transaction).
+
+### Color palette
+
+The UI for scheduling and roster views uses this palette and exposes it via CSS variables in `src/index.css`:
+
+Run the client locally with:
+
+```bash
+bun run dev:client
+```

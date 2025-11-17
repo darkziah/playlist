@@ -1,75 +1,217 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import beaver from "@/assets/beaver.svg";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { Game } from "shared";
+
 import { Button } from "@/components/ui/button";
-import { hcWithType } from "server/dist/client";
-import { useMutation } from "@tanstack/react-query";
+import { fetchGames, watchGames } from "@/lib/games";
+import {
+	useGameMasterAuth,
+	loginGameMaster,
+	logoutGameMaster,
+} from "@/lib/gameMasterAuth";
 
 export const Route = createFileRoute("/")({
 	component: Index,
 });
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3000";
-
-const client = hcWithType(SERVER_URL);
-
-type ResponseType = Awaited<ReturnType<typeof client.hello.$get>>;
-
 function Index() {
-	const [data, setData] = useState<
-		Awaited<ReturnType<ResponseType["json"]>> | undefined
-	>();
+	const queryClient = useQueryClient();
+	const { user, isGameMaster, loading: authLoading } = useGameMasterAuth();
 
-	const { mutate: sendRequest } = useMutation({
-		mutationFn: async () => {
-			try {
-				const res = await client.hello.$get();
-				if (!res.ok) {
-					console.log("Error fetching data");
-					return;
-				}
-				const data = await res.json();
-				setData(data);
-			} catch (error) {
-				console.log(error);
-			}
-		},
+	const { data: games = [], isLoading } = useQuery<Game[]>({
+		queryKey: ["games"],
+		queryFn: fetchGames,
 	});
 
+	useEffect(() => {
+		const stop = watchGames((updated) => {
+			queryClient.setQueryData(["games"], updated);
+		});
+		return () => stop();
+	}, [queryClient]);
+
+	const hasGames = games.length > 0;
+
 	return (
-		<div className="max-w-xl mx-auto flex flex-col gap-6 items-center justify-center min-h-screen">
-			<a
-				href="https://github.com/stevedylandev/bhvr"
-				target="_blank"
-				rel="noopener"
-			>
-				<img
-					src={beaver}
-					className="w-16 h-16 cursor-pointer"
-					alt="beaver logo"
-				/>
-			</a>
-			<h1 className="text-5xl font-black">bhvr</h1>
-			<h2 className="text-2xl font-bold">Bun + Hono + Vite + React</h2>
-			<p>A typesafe fullstack monorepo</p>
-			<div className="flex items-center gap-4">
-				<Button onClick={() => sendRequest()}>Call API</Button>
-				<Button variant="secondary" asChild>
-					<a target="_blank" href="https://bhvr.dev" rel="noopener">
-						Docs
-					</a>
-				</Button>
+		<div className="min-h-screen bg-background text-foreground px-4 py-8">
+			<div className="mx-auto flex max-w-6xl flex-col gap-8">
+				<header className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
+					<div>
+						<h1 className="text-3xl font-black tracking-tight text-[#000000]">
+							Upcoming games
+						</h1>
+						<p className="text-sm text-muted-foreground">
+							Schedule matches and let players join a deterministic roster.
+						</p>
+					</div>
+					<div className="mt-4 flex items-center gap-3 text-sm text-muted-foreground sm:mt-0">
+						{authLoading ? (
+							<span>Checking access…</span>
+						) : user && isGameMaster ? (
+							<>
+								<span>
+									Signed in as {user.email ?? "game master"}
+								</span>
+								<Button
+									variant="outline"
+									size="sm"
+									className="border-border"
+									onClick={() => {
+										void logoutGameMaster();
+									}}
+								>
+									Sign out
+								</Button>
+							</>
+						) : (
+							<>
+								<span>Sign in as a game master to schedule games.</span>
+								<Button
+									variant="outline"
+									size="sm"
+									className="border-border"
+									onClick={() => {
+										void loginGameMaster();
+									}}
+								>
+									Sign in
+								</Button>
+							</>
+						)}
+					</div>
+				</header>
+
+				<div className="grid gap-8">
+					<section className="space-y-4">
+						<h2 className="text-lg font-semibold text-[#000000]">
+							Joinable games
+						</h2>
+						{isLoading ? (
+							<p className="text-sm text-muted-foreground">Loading games…</p>
+						) : !hasGames ? (
+							<div className="rounded-xl border border-dashed border-border bg-card/40 p-6 text-sm text-muted-foreground">
+								<p className="mb-1 font-medium">No future games scheduled.</p>
+								<p>Game masters can open the dashboard to schedule the first game.</p>
+							</div>
+						) : (
+							<div className="grid gap-4 sm:grid-cols-2">
+								{games.map((game) => {
+									const slotsRemaining = Math.max(
+										game.maxPlayers - game.filledSlots,
+										0,
+									);
+									return (
+										<article
+											key={game.id}
+											className="flex h-full flex-col justify-between rounded-xl border border-border bg-card/90 p-5 shadow-sm"
+										>
+											<div className="space-y-2">
+												<h3 className="text-base font-semibold text-[#000000]">
+													{game.title}
+												</h3>
+												<p className="line-clamp-2 text-xs text-muted-foreground">
+													{game.description}
+												</p>
+												<dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+													<div className="space-y-0.5">
+														<dt className="font-semibold text-[#3e3636]">
+															Schedule
+														</dt>
+														<dd>
+															{new Date(game.dateTime).toLocaleString()}
+														</dd>
+													</div>
+													<div className="space-y-0.5">
+														<dt className="font-semibold text-[#3e3636]">
+															Price
+														</dt>
+														<dd>${game.price.toFixed(2)} / player</dd>
+													</div>
+													<div className="space-y-0.5">
+														<dt className="font-semibold text-[#3e3636]">
+															Slots left
+														</dt>
+														<dd>
+															{game.filledSlots} / {game.maxPlayers} (
+															{slotsRemaining} left)
+														</dd>
+													</div>
+												</dl>
+											</div>
+											<div className="mt-4 flex items-center justify-between gap-3">
+												<span
+													className="inline-flex items-center rounded-full bg-[#000000]/5 px-3 py-1 text-xs font-medium text-[#3e3636]"
+													aria-label={
+														slotsRemaining > 0
+															? `${slotsRemaining} slots remaining`
+															: "Game is full"
+													}
+												>
+													{slotsRemaining > 0
+														? `${slotsRemaining} slots remaining`
+														: "Game is full"}
+												</span>
+												<Button
+													asChild
+													size="sm"
+													className=" text-[#f5eded]	"
+													disabled={slotsRemaining <= 0}
+												>
+													<Link to="/games/$gameId" params={{ gameId: game.id }}>
+														View details
+													</Link>
+												</Button>
+											</div>
+										</article>
+									);
+								})}
+							</div>
+						)}
+					</section>
+					<section className="rounded-xl border border-border bg-card/95 p-6 shadow-sm">
+						<h2 className="mb-2 text-lg font-semibold text-[#000000]">
+							Game master controls
+						</h2>
+						<p className="text-sm text-muted-foreground">
+							Create and manage games from the dedicated dashboard.
+						</p>
+						<div className="mt-4">
+							{authLoading ? (
+								<p className="text-sm text-muted-foreground">Checking access…</p>
+							) : isGameMaster ? (
+								<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+									<Button asChild className="bg-[#000000] text-[#f5eded] hover:bg-[#3e3636]">
+										<Link to="/dashboard">Open dashboard</Link>
+									</Button>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="text-[#3e3636]"
+										onClick={() => {
+											void logoutGameMaster();
+										}}
+									>
+										Sign out
+									</Button>
+								</div>
+							) : (
+								<Button
+									className="bg-[#000000] text-[#f5eded] hover:bg-[#3e3636]"
+									onClick={() => {
+										void loginGameMaster({ redirectToDashboard: true });
+									}}
+								>
+									Sign in as game master
+								</Button>
+							)}
+						</div>
+					</section>
+				</div>
 			</div>
-			{data && (
-				<pre className="bg-gray-100 p-4 rounded-md">
-					<code>
-						Message: {data.message} <br />
-						Success: {data.success.toString()}
-					</code>
-				</pre>
-			)}
 		</div>
 	);
 }
 
 export default Index;
+
