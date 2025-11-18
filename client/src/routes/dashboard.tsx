@@ -118,14 +118,14 @@ function DashboardRoute() {
     if (!isGameMaster) {
       return (
         <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card/90 p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-bold text-[#000000]">
+          <h1 className="text-2xl font-bold text-foreground">
             Game master access required
           </h1>
           <p className="mt-3 text-sm text-muted-foreground">
             Sign in with your game master account to manage schedules and invites.
           </p>
           <Button
-            className="mt-6 bg-[#000000] text-[#f5eded] hover:bg-[#3e3636]"
+            className="mt-6"
             onClick={() => {
               void loginGameMaster({ redirectToDashboard: true });
             }}
@@ -140,10 +140,10 @@ function DashboardRoute() {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-10">
         <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#d72323]">
+            <p className="text-xs uppercase tracking-[0.2em] text-destructive">
               Game master dashboard
             </p>
-            <h1 className="text-3xl font-black text-[#000000]">
+            <h1 className="text-3xl font-black text-foreground">
               Schedule and manage games
             </h1>
           </div>
@@ -164,10 +164,10 @@ function DashboardRoute() {
         <div className="grid gap-8 lg:grid-cols-2">
           <section className="rounded-2xl border border-border bg-card/95 p-6 shadow-sm">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-[#d72323]">
+              <p className="text-xs uppercase tracking-[0.2em] text-destructive">
                 New game
               </p>
-              <h2 className="text-xl font-semibold text-[#000000]">
+              <h2 className="text-xl font-semibold text-foreground">
                 Create upcoming game
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -231,11 +231,11 @@ function DashboardRoute() {
                 />
               </div>
               {formError && (
-                <p className="text-sm text-[#d72323]">{formError}</p>
+                <p className="text-sm text-destructive">{formError}</p>
               )}
               <Button
                 type="submit"
-                className="w-full bg-[#000000] text-[#f5eded] hover:bg-[#3e3636]"
+                className="w-full"
                 disabled={createGameMutation.isPending}
               >
                 {createGameMutation.isPending ? "Creating game…" : "Create game"}
@@ -244,10 +244,10 @@ function DashboardRoute() {
           </section>
           <section className="rounded-2xl border border-border bg-card/95 p-6 shadow-sm">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.2em] text-[#d72323]">
+              <p className="text-xs uppercase tracking-[0.2em] text-destructive">
                 Invites
               </p>
-              <h2 className="text-xl font-semibold text-[#000000]">
+              <h2 className="text-xl font-semibold text-foreground">
                 Invite another game master
               </h2>
               <p className="text-sm text-muted-foreground">
@@ -270,7 +270,7 @@ function DashboardRoute() {
                 />
                 <Button
                   type="button"
-                  className="bg-[#000000] text-[#f5eded] hover:bg-[#3e3636] sm:w-auto"
+                  className="sm:w-auto"
                   disabled={inviteDisabled}
                   onClick={() => {
                     setInviteLink(null);
@@ -281,7 +281,7 @@ function DashboardRoute() {
                 </Button>
               </div>
               {inviteError && (
-                <p className="text-sm text-[#d72323]">{inviteError}</p>
+                <p className="text-sm text-destructive">{inviteError}</p>
               )}
               {inviteLink && (
                 <div className="space-y-1 text-sm">
