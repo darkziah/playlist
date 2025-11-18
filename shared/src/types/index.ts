@@ -16,6 +16,8 @@ export type Game = {
   price: number;
   status: GameStatus;
   filledSlots: number;
+  location?: string;
+  hours?: number;
   createdAt: TimestampString;
   updatedAt: TimestampString;
 };
@@ -41,6 +43,10 @@ export type CompletedPlayerIdentityProfile = Required<
   photoUrl?: string;
 };
 
+export type PaymentMethod = "cash" | "gcash";
+
+export type PaymentStatus = "unpaid" | "paid";
+
 export type PlayerEntry = {
   id: string;
   gameId: string;
@@ -50,6 +56,8 @@ export type PlayerEntry = {
   queueNumber: number;
   createdAt: TimestampString;
   identityProfile?: CompletedPlayerIdentityProfile;
+  paymentMethod?: PaymentMethod;
+  paymentStatus?: PaymentStatus;
 };
 
 export type NewPlayerEntryPayload = {
@@ -57,4 +65,5 @@ export type NewPlayerEntryPayload = {
   userId: string;
   notes?: string;
   identityProfile: CompletedPlayerIdentityProfile;
+  queueNumber: number;
 };
