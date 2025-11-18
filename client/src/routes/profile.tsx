@@ -86,12 +86,12 @@ function UnauthedProfileScreen() {
               You&apos;ll use this identity when joining game rosters so staff can quickly
               recognize you.
             </p>
-            {error && <p className="text-sm text-[#d72323]">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
           <CardFooter className="justify-end gap-3">
             <Button
               type="button"
-              className="bg-[#d72323] hover:bg-[#b71d1d] text-[#f5eded]"
+              variant="destructive"
               onClick={() => {
                 void handleSignIn();
               }}
@@ -129,7 +129,7 @@ function CompletedProfileScreen({
               />
             )}
             <div className="space-y-1 text-sm text-center sm:text-left">
-              <p className="font-semibold text-[#000000]">
+              <p className="font-semibold text-foreground">
                 @{profile.username}
               </p>
               <p className="text-muted-foreground">
@@ -208,7 +208,7 @@ export function IdentityWizard({
           </CardHeader>
           <CardContent>
             {globalError && (
-              <p className="mb-3 text-sm text-[#d72323]">{globalError}</p>
+              <p className="mb-3 text-sm text-destructive">{globalError}</p>
             )}
             {step === 1 && (
               <WizardStepPhoto
@@ -362,13 +362,13 @@ function WizardStepPhoto({
         )}
       />
 
-      {localError && <p className="text-sm text-[#d72323]">{localError}</p>}
+      {localError && <p className="text-sm text-destructive">{localError}</p>}
 
       <div className="flex justify-end gap-3 pt-2">
         <Button
           type="submit"
           disabled={uploading}
-          className="bg-[#d72323] hover:bg-[#b71d1d] text-[#f5eded]"
+          variant="destructive"
         >
           {uploading ? "Uploading..." : "Continue"}
         </Button>
@@ -456,13 +456,13 @@ function WizardStepUsername({
         </p>
       </div>
 
-      {fieldError && <p className="text-sm text-[#d72323]">{fieldError}</p>}
+      {fieldError && <p className="text-sm text-destructive">{fieldError}</p>}
 
       <div className="flex justify-end gap-3 pt-2">
         <Button
           type="submit"
           disabled={submitting}
-          className="bg-[#d72323] hover:bg-[#b71d1d] text-[#f5eded]"
+          variant="destructive"
         >
           {submitting ? "Checking..." : "Continue"}
         </Button>
@@ -556,7 +556,7 @@ function WizardStepDetails({
                   autoComplete="given-name"
                 />
                 {errors.firstName && (
-                  <p className="text-xs text-[#d72323]">{errors.firstName}</p>
+                  <p className="text-xs text-destructive">{errors.firstName}</p>
                 )}
               </div>
             )}
@@ -574,7 +574,7 @@ function WizardStepDetails({
                   autoComplete="family-name"
                 />
                 {errors.lastName && (
-                  <p className="text-xs text-[#d72323]">{errors.lastName}</p>
+                  <p className="text-xs text-destructive">{errors.lastName}</p>
                 )}
               </div>
             )}
@@ -593,7 +593,7 @@ function WizardStepDetails({
                 onBlur={field.handleBlur}
               />
               {errors.dateOfBirth && (
-                <p className="text-xs text-[#d72323]">{errors.dateOfBirth}</p>
+                <p className="text-xs text-destructive">{errors.dateOfBirth}</p>
               )}
             </div>
           )}
@@ -622,7 +622,7 @@ function WizardStepDetails({
         <Button
           type="submit"
           disabled={submitting}
-          className="bg-[#d72323] hover:bg-[#b71d1d] text-[#f5eded]"
+          variant="destructive"
         >
           {submitting ? "Saving..." : "Continue"}
         </Button>
@@ -635,7 +635,7 @@ function WizardStepWelcome({ returnTo }: { returnTo?: string }) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-[#000000]">
+        <p className="text-sm font-semibold text-foreground">
           You&apos;re ready to join games!
         </p>
         <p className="text-sm text-muted-foreground">
@@ -647,7 +647,7 @@ function WizardStepWelcome({ returnTo }: { returnTo?: string }) {
       <div className="flex justify-end gap-3">
         <Button
           asChild
-          className="bg-[#d72323] hover:bg-[#b71d1d] text-[#f5eded]"
+          variant="destructive"
         >
           <Link to={returnTo ?? "/"}>Browse games</Link>
         </Button>

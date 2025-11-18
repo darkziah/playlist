@@ -88,12 +88,12 @@ function UnauthedIdentitySetupScreen() {
               We&apos;ll guide you through adding a profile picture, roster username,
               and personal details so staff can recognize you.
             </p>
-            {error && <p className="text-sm text-[#d72323]">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </CardContent>
           <CardFooter className="justify-end gap-3">
             <Button
               type="button"
-              className="bg-[#d72323] hover:bg-[#b71d1d] text-[#f5eded]"
+              variant="destructive"
               onClick={() => {
                 void handleSignIn();
               }}

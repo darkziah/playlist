@@ -55,7 +55,7 @@ function InviteRoute() {
     return (
       <div className="min-h-screen bg-background text-foreground px-4 py-8">
         <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-border bg-card/95 p-6 shadow-sm">
-          <h1 className="text-2xl font-bold text-[#000000]">
+          <h1 className="text-2xl font-bold text-foreground">
             Game master invite
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -63,7 +63,6 @@ function InviteRoute() {
             automatically apply it.
           </p>
           <Button
-            className="bg-[#000000] text-[#f5eded] hover:bg-[#3e3636]"
             onClick={() => {
               void loginGameMaster();
             }}
@@ -78,7 +77,7 @@ function InviteRoute() {
   return (
     <div className="min-h-screen bg-background text-foreground px-4 py-8">
       <div className="mx-auto max-w-xl space-y-4 rounded-xl border border-border bg-card/95 p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-[#000000]">
+        <h1 className="text-2xl font-bold text-foreground">
           Game master invite
         </h1>
         {loading || status === "accepting" ? (
@@ -90,15 +89,12 @@ function InviteRoute() {
             <p className="text-sm text-muted-foreground">
               {message ?? "Invite accepted."}
             </p>
-            <Button
-              asChild
-              className="bg-[#000000] text-[#f5eded] hover:bg-[#3e3636]"
-            >
+            <Button asChild>
               <Link to="/">Go to home</Link>
             </Button>
           </>
         ) : status === "error" ? (
-          <p className="text-sm text-[#d72323]">
+          <p className="text-sm text-destructive">
             {message ?? "Unable to accept invite."}
           </p>
         ) : (
