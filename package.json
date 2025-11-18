@@ -8,7 +8,8 @@
   "workspaces": [
     "./server",
     "./client",
-    "./shared"
+    "./shared",
+    "./expo-web"
   ],
   "scripts": {
     "dev": "turbo dev",
