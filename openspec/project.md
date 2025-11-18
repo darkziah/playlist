@@ -15,6 +15,7 @@ Playlist is a full‑stack TypeScript app for managing a "playlist" of upcoming 
   - TanStack Query for data fetching and caching.
   - TanStack React Form for form state and validation.
   - Tailwind v4 for styling; Radix UI primitives; Lucide icons; Sonner for toasts.
+- **Mobile / Web Shell:** Expo Router app in `expo-web/` (React Native + Web) using NativeWind/Tailwind and lucide-react-native icons.
 - **Backend:** Hono server in `server/` (Bun target) exposing a JSON API and sharing types with the client.
 - **Shared Package:** `shared/` for cross‑cutting TypeScript types and utilities.
 - **Persistence & Auth:** Firebase (Cloud Firestore + Firebase Auth) used directly from the client.
@@ -44,7 +45,7 @@ Playlist is a full‑stack TypeScript app for managing a "playlist" of upcoming 
 
 ### Architecture Patterns
 - **Monorepo:**
-  - Root `package.json` defines Bun workspaces: `server`, `client`, `shared`.
+  - Root `package.json` defines Bun workspaces: `server`, `client`, `shared`, `expo-web`.
   - Turbo pipelines keep builds, tests, and type‑checks consistent across packages.
 - **Shared Types:**
   - `shared/` contains types that describe API payloads and shared domain concepts.
@@ -123,6 +124,7 @@ Playlist is a full‑stack TypeScript app for managing a "playlist" of upcoming 
 - **Hosting / Infra (flexible by design):**
   - Client is built as a Vite React app and can be deployed to static hosts (e.g. Netlify, Cloudflare Pages, etc.).
   - Server is a Hono app suitable for Bun, Node, or edge runtimes.
+  - `expo-web` is an Expo Router app targeting web (and compatible with native) and is run locally with `bun run dev` inside `expo-web/`.
 - **Ecosystem Libraries:**
   - TanStack (Router, Query, Form), Radix UI, Lucide, Sonner, Tailwind 4.
   - These are considered part of the standard stack; new UI or data‑flow patterns should integrate with them rather than introduce competing abstractions.
