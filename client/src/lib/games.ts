@@ -10,6 +10,7 @@ import {
   runTransaction,
   serverTimestamp,
   Timestamp,
+  updateDoc,
 } from "firebase/firestore";
 import type {
   Game,
@@ -67,9 +68,44 @@ export async function fetchGames(): Promise<Game[]> {
       price: data.price,
       status: data.status ?? "scheduled",
       filledSlots: data.filledSlots ?? 0,
+      location: data.location,
+      hours: data.hours,
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
+  });
+}
+
+export async function leaveGame(gameId: string, userId: string): Promise<void> {
+  if (!userId) {
+    throw new Error("You must be signed in to leave this game");
+  }
+
+  await runTransaction(db, async (tx) => {
+    const gameRef = doc(gamesCollection, gameId);
+    const rosterRef = doc(rosterCollectionForGame(gameId), userId);
+
+    const gameSnap = await tx.get(gameRef);
+    if (!gameSnap.exists()) {
+      throw new Error("Game not found");
+    }
+
+    const rosterSnap = await tx.get(rosterRef);
+    if (!rosterSnap.exists()) {
+      // User is not in the roster; nothing to do.
+      return;
+    }
+
+    const gameData = gameSnap.data() as any;
+    const filledSlots = (gameData.filledSlots as number | undefined) ?? 0;
+    const newFilledSlots = Math.max(filledSlots - 1, 0);
+    const updatedAt = new Date().toISOString();
+
+    tx.delete(rosterRef);
+    tx.update(gameRef, {
+      filledSlots: newFilledSlots,
+      updatedAt,
+    });
   });
 }
 
@@ -87,6 +123,8 @@ export async function fetchGameById(gameId: string): Promise<Game | null> {
     price: data.price,
     status: data.status ?? "scheduled",
     filledSlots: data.filledSlots ?? 0,
+    location: data.location,
+    hours: data.hours,
     createdAt: toIso(data.createdAt),
     updatedAt: toIso(data.updatedAt),
   };
@@ -139,8 +177,19 @@ export async function joinGame(
       throw new Error("Game is full");
     }
 
-    const queueNumber = filledSlots + 1;
-    const rosterRef = doc(rosterCollectionForGame(gameId));
+    const queueNumber = payload.queueNumber;
+
+    if (!Number.isInteger(queueNumber) || queueNumber < 1 || queueNumber > maxPlayers) {
+      throw new Error("Invalid slot selection");
+    }
+
+    const rosterRef = doc(rosterCollectionForGame(gameId), payload.userId);
+    const existingRosterSnap = await tx.get(rosterRef);
+
+    if (existingRosterSnap.exists()) {
+      throw new Error("You have already joined this game");
+    }
+
     const createdAt = new Date().toISOString();
 
     tx.set(rosterRef, {
@@ -154,7 +203,7 @@ export async function joinGame(
     });
 
     tx.update(gameRef, {
-      filledSlots: queueNumber,
+      filledSlots: filledSlots + 1,
       updatedAt: createdAt,
     });
 
@@ -185,6 +234,8 @@ export function watchGames(onChange: (games: Game[]) => void): () => void {
         price: data.price,
         status: data.status ?? "scheduled",
         filledSlots: data.filledSlots ?? 0,
+        location: data.location,
+        hours: data.hours,
         createdAt: toIso(data.createdAt),
         updatedAt: toIso(data.updatedAt),
       };
@@ -213,6 +264,8 @@ export function watchGame(
       price: data.price,
       status: data.status ?? "scheduled",
       filledSlots: data.filledSlots ?? 0,
+      location: data.location,
+      hours: data.hours,
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     });
@@ -242,5 +295,17 @@ export function watchRoster(
       };
     });
     onChange(entries);
+  });
+}
+
+export async function updateGameFilledSlots(
+  gameId: string,
+  filledSlots: number,
+): Promise<void> {
+  const safeFilledSlots = Math.max(0, filledSlots);
+  const gameRef = doc(gamesCollection, gameId);
+  await updateDoc(gameRef, {
+    filledSlots: safeFilledSlots,
+    updatedAt: new Date().toISOString(),
   });
 }
