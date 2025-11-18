@@ -1,0 +1,30 @@
+{
+  "rules": {
+    ".read": "now < 1766073600000", // 2025-12-19
+    ".write": "now < 1766073600000", // 2025-12-19
+    "player_stats": {
+      "$userId": {
+        ".read": true,
+        ".write": "root.child('game_masters').child(auth.uid).exists()"
+      }
+    },
+    "active_matches": {
+      "$gameId": {
+        ".read": true,
+        ".write": "auth != null"
+      }
+    },
+    "match_history": {
+      "$gameId": {
+        ".read": true,
+        ".write": "auth != null"
+      }
+    },
+    "rotation_state": {
+      "$gameId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
