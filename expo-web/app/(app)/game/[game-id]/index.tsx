@@ -12,10 +12,13 @@ import {
   watchGame,
   watchRoster,
 } from "@/lib/games";
+import { useActiveMatch, useMatchHistory } from '@/lib/match-state';
 import { useGameMasterAuth } from "@/lib/gameMasterAuth";
 import { usePlayerIdentityProfile } from "@/hooks/usePlayerIdentityProfile";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import Head from "expo-router/head";
+
 import * as Linking from "expo-linking";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -31,7 +34,7 @@ import {
   EditIcon,
   ClipboardListIcon,
 } from "lucide-react-native";
-import { ActivityIndicator, Platform, ScrollView, Share, TextInput, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, Share, TextInput, View } from "react-native";
 import type { Game, NewPlayerEntryPayload, PlayerEntry } from "shared";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, type Option } from "@/components/ui/select";
@@ -53,7 +56,11 @@ export default function GameDetailScreen() {
     profileComplete,
   } = usePlayerIdentityProfile();
 
-  const { isGameMaster, loading: gmLoading } = useGameMasterAuth();
+  const { isGameMaster, loading: gmLoading, role } = useGameMasterAuth();
+  const { activeMatch } = useActiveMatch(gameId);
+  const { matches } = useMatchHistory(gameId);
+
+  const latestMatch = matches.length > 0 ? matches[matches.length - 1] : null;
 
   const [game, setGame] = useState<Game | null>(null);
   const [roster, setRoster] = useState<PlayerEntry[]>([]);
@@ -167,6 +174,8 @@ export default function GameDetailScreen() {
         message: `Check out this game: ${game.title}`,
         title: game.title,
         url: gameUrl,
+      }, {
+        dialogTitle: game.title
       });
     } catch (e: any) {
       setError(e?.message ?? "Unable to share game.");
@@ -244,6 +253,49 @@ export default function GameDetailScreen() {
     }
   };
 
+  const handleFillRoster = async () => {
+    if (!game || !isGameMaster) return;
+
+    // Confirm before filling
+    if (Platform.OS === 'web') {
+      if (!window.confirm("Are you sure you want to fill the roster with dummy players? This is for testing only.")) {
+        return;
+      }
+    }
+
+    setGameLoading(true);
+    try {
+      // Fill up to 15 players or maxPlayers, whichever is smaller, to avoid too many writes if max is huge
+      // But user said "fill up", so let's fill available slots.
+      // Limit to 12 for a full basketball game roster (5v5 + subs) if max is large, 
+      // but usually maxPlayers is set to something like 15-20.
+      // Let's just fill all available slots.
+
+      const slotsToFill = availableSlots;
+
+      for (const slot of slotsToFill) {
+        const dummyId = `dummy_${Date.now()}_${slot}`;
+        const payload: NewPlayerEntryPayload = {
+          name: `Player ${slot}`,
+          userId: dummyId,
+          queueNumber: slot,
+          identityProfile: {
+            username: `player${slot}`,
+            firstName: "Test",
+            lastName: `Player ${slot}`,
+            dateOfBirth: "2000-01-01",
+          }
+        };
+        await joinGame(gameId, payload);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to fill roster");
+    } finally {
+      setGameLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -286,9 +338,14 @@ export default function GameDetailScreen() {
           <LucideShare />
         </Button>
       }} />
+      <Head>
+        <meta property="og:title" content={game.title} />
+        <meta property="og:description" content={game.description || `Join ${game.title} on Playlist`} />
+        <meta property="og:url" content={Linking.createURL(`/game/${game.id}`)} />
+      </Head>
       <ScrollView className="flex-1 bg-background px-4 py-8">
         <View className="mx-auto w-full max-w-3xl gap-6">
-          <View className="mb-6 rounded-2xl border border-border bg-card px-4 py-4 shadow-sm shadow-black/5">
+          <View className="mb-2 rounded-2xl border border-border bg-card px-4 py-4 shadow-sm shadow-black/5">
             <View className="flex-row items-center justify-between">
               <View>
                 <Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -308,7 +365,7 @@ export default function GameDetailScreen() {
                 <View className="mt-3 flex justify-end gap-2">
                   {!gmLoading && isGameMaster ? (
                     <>
-                      <Button
+                      {role === 'super_admin' || role === 'admin' && <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
@@ -320,20 +377,8 @@ export default function GameDetailScreen() {
                         }}
                       >
                         <Icon as={EditIcon} size={18} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onPress={() => {
-                          router.push({
-                            pathname: "/game/[game-id]/record-stats",
-                            params: { "game-id": gameId },
-                          });
-                        }}
-                      >
-                        <Icon as={ClipboardListIcon} size={18} />
-                      </Button>
+                      </Button>}
+
                     </>
                   ) : null}
                 </View>
@@ -356,7 +401,7 @@ export default function GameDetailScreen() {
                     Time
                   </Text>
                   <Text className="text-sm text-foreground">
-                    {formatGameTime(game.dateTime, game.hours)}
+                    {formatGameTime(game.dateTime, Number(game.hours))}
                   </Text>
                 </View>
               </View>
@@ -401,6 +446,132 @@ export default function GameDetailScreen() {
               </View>
             </View>
           </View>
+
+          <View>
+            {activeMatch && (
+              <Pressable
+                onPress={() => {
+                  if (isGameMaster) {
+                    router.push({
+                      pathname: '/game/[game-id]/record-stats',
+                      params: { 'game-id': gameId },
+                    });
+                  }
+                }}
+                disabled={!isGameMaster}
+              >
+                <View className="mb-2 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-4">
+                  <View className="flex-row items-center justify-between">
+                    <View>
+                      <Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                        Live Match
+                      </Text>
+                      <Text className="text-xs text-muted-foreground">
+                        Match #{activeMatch.matchNumber} • {activeMatch.timer.remainingSeconds > 0 ? Math.floor(activeMatch.timer.remainingSeconds / 60) + ':' + (activeMatch.timer.remainingSeconds % 60).toString().padStart(2, '0') : 'Ended'}
+                      </Text>
+                    </View>
+                    {isGameMaster && (
+                      <View className="rounded-full bg-primary px-2 py-1">
+                        <Text className="text-[10px] font-bold text-primary-foreground">
+                          Manage
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View className="mt-4 flex-row items-center justify-between px-4">
+                    <View className="items-center">
+                      <Text className="text-3xl font-bold text-foreground">
+                        {activeMatch.teamA.score}
+                      </Text>
+                      <Text className="text-xs font-medium text-muted-foreground">
+                        Team A
+                      </Text>
+                    </View>
+                    <Text className="text-xl font-bold text-muted-foreground/50">-</Text>
+                    <View className="items-center">
+                      <Text className="text-3xl font-bold text-foreground">
+                        {activeMatch.teamB.score}
+                      </Text>
+                      <Text className="text-xs font-medium text-muted-foreground">
+                        Team B
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </Pressable>
+            )}
+          </View>
+
+          <View>
+            {!activeMatch && latestMatch && (
+              <View className="mb-2 rounded-2xl border border-border bg-card px-4 py-4 shadow-sm shadow-black/5">
+                <View className="flex-row items-center justify-between">
+                  <View>
+                    <Text className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      Latest Match
+                    </Text>
+                    <Text className="text-xs text-muted-foreground">
+                      Match #{latestMatch.matchNumber} • Ended
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="mt-4 flex-row items-center justify-between px-4">
+                  <View className="items-center">
+                    <Text className="text-3xl font-bold text-foreground">
+                      {latestMatch.teamAScore}
+                    </Text>
+                    <Text className="text-xs font-medium text-muted-foreground">
+                      Team A
+                    </Text>
+                  </View>
+                  <Text className="text-xl font-bold text-muted-foreground/50">-</Text>
+                  <View className="items-center">
+                    <Text className="text-3xl font-bold text-foreground">
+                      {latestMatch.teamBScore}
+                    </Text>
+                    <Text className="text-xs font-medium text-muted-foreground">
+                      Team B
+                    </Text>
+                  </View>
+                </View>
+
+                {latestMatch.winner && (
+                  <View className="mt-4 items-center">
+                    <Text className="text-xs font-medium text-primary">
+                      Team {latestMatch.winner} Won
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          <View className="mb-6">
+            {isGameMaster && <Button
+              className="text-white dark:text-primary-foreground"
+              onPress={() => {
+                router.push({
+                  pathname: "/game/[game-id]/record-stats",
+                  params: { "game-id": gameId },
+                });
+              }}
+            >
+              Live Scoring
+            </Button>}
+
+            {isGameMaster && (
+              <Button
+                variant="outline"
+                className="mt-2"
+                onPress={handleFillRoster}
+              >
+                Simulate: Fill Roster (Test)
+              </Button>
+            )}
+          </View>
+
           <View className="mb-6 gap-3">
             <Text className="text-lg font-semibold text-foreground">
               Current roster

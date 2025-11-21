@@ -18,11 +18,13 @@ import {
 import { auth, db } from "@/lib/firebase";
 
 const gameMastersCollection = collection(db, "gameMasters");
-const invitesCollection = collection(db, "gameMasterInvites");
+
+export type GameMasterRole = "super_admin" | "admin" | "scorer";
 
 export type GameMasterAuthState = {
   user: User | null;
   isGameMaster: boolean;
+  role: GameMasterRole | null;
   loading: boolean;
 };
 
@@ -30,25 +32,49 @@ export function useGameMasterAuth(): GameMasterAuthState {
   const [state, setState] = useState<GameMasterAuthState>({
     user: null,
     isGameMaster: false,
+    role: null,
     loading: true,
   });
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        setState({ user: null, isGameMaster: false, loading: false });
+        setState({
+          user: null,
+          isGameMaster: false,
+          role: null,
+          loading: false,
+        });
         return;
       }
 
       try {
         const gmDoc = await getDoc(doc(gameMastersCollection, user.uid));
+        if (gmDoc.exists()) {
+          const data = gmDoc.data();
+          // Default to 'admin' for existing users without a role field
+          const role = (data.role as GameMasterRole) || "admin";
+          setState({
+            user,
+            isGameMaster: true,
+            role,
+            loading: false,
+          });
+        } else {
+          setState({
+            user,
+            isGameMaster: false,
+            role: null,
+            loading: false,
+          });
+        }
+      } catch {
         setState({
           user,
-          isGameMaster: gmDoc.exists(),
+          isGameMaster: false,
+          role: null,
           loading: false,
         });
-      } catch {
-        setState({ user, isGameMaster: false, loading: false });
       }
     });
 
@@ -76,111 +102,54 @@ export async function logoutGameMaster(): Promise<void> {
   await signOut(auth);
 }
 
-export type InviteResult =
-  | { kind: "accepted" }
-  | { kind: "invalid"; reason: string };
-
-export async function createGameMasterInvite(email: string): Promise<string> {
+export async function promoteToGameMaster(
+  uid: string,
+  role: GameMasterRole,
+): Promise<void> {
   if (!auth.currentUser) {
-    throw new Error("You must be signed in as a game master to create invites.");
+    throw new Error("You must be signed in to promote users.");
   }
 
-  const trimmed = email.trim();
-  if (!trimmed) {
-    throw new Error("Email is required.");
+  // Check if user has a player profile to ensure valid UID
+  const playerProfileRef = doc(db, "playerProfiles", uid);
+  const playerProfileSnap = await getDoc(playerProfileRef);
+
+  if (!playerProfileSnap.exists()) {
+    throw new Error("User does not have a player profile. Please check the UID.");
   }
 
-  const token =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2);
+  const gmRef = doc(gameMastersCollection, uid);
 
-  const inviteRef = doc(invitesCollection, token);
-
-  const expiresAt = Timestamp.fromDate(
-    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  );
-
-  await setDoc(inviteRef, {
-    email: trimmed.toLowerCase(),
-    createdAt: serverTimestamp(),
-    createdBy: auth.currentUser.uid,
-    expiresAt,
-    used: false,
-  });
-
-  return token;
-}
-
-export async function acceptGameMasterInvite(
-  token: string,
-): Promise<InviteResult> {
-  const user = auth.currentUser;
-
-  if (!user || !user.email) {
-    return {
-      kind: "invalid",
-      reason: "You must be logged in with an email address to accept an invite.",
-    };
-  }
-
-  const inviteRef = doc(invitesCollection, token);
-  const snap = await getDoc(inviteRef);
-
-  if (!snap.exists()) {
-    return { kind: "invalid", reason: "Invite not found." };
-  }
-
-  const data = snap.data() as any;
-
-  if (data.used) {
-    return { kind: "invalid", reason: "Invite has already been used." };
-  }
-
-  if (typeof data.email === "string") {
-    const expected = data.email.toLowerCase();
-    const actual = user.email.toLowerCase();
-    if (expected !== actual) {
-      return {
-        kind: "invalid",
-        reason: "This invite is for a different email address.",
-      };
-    }
-  }
-
-  if (data.expiresAt && typeof data.expiresAt.toMillis === "function") {
-    const now = Timestamp.now();
-    if (data.expiresAt.toMillis() < now.toMillis()) {
-      return { kind: "invalid", reason: "Invite has expired." };
-    }
-  }
-
-  const gmRef = doc(gameMastersCollection, user.uid);
+  // We might not have the email since we are promoting by UID, 
+  // but we can try to get it from the profile if it exists there (it usually doesn't for privacy),
+  // or we just rely on the UID/Username for identification.
+  // For now, we'll just set the role.
 
   await setDoc(
     gmRef,
     {
-      email: user.email,
-      createdAt: serverTimestamp(),
+      role,
+      promotedAt: serverTimestamp(),
+      promotedBy: auth.currentUser.uid,
     },
     { merge: true },
   );
-
-  await setDoc(
-    inviteRef,
-    {
-      used: true,
-      usedAt: serverTimestamp(),
-      usedBy: user.uid,
-    },
-    { merge: true },
-  );
-
-  return { kind: "accepted" };
 }
 
-export function canUserCreateGame(isGameMaster: boolean): boolean {
-  return isGameMaster;
+export function canUserCreateGame(role: GameMasterRole | null): boolean {
+  return role === "admin" || role === "super_admin";
+}
+
+export function canUserEditGame(role: GameMasterRole | null): boolean {
+  return role === "admin" || role === "super_admin";
+}
+
+export function canUserRecordStats(role: GameMasterRole | null): boolean {
+  return role === "scorer" || role === "admin" || role === "super_admin";
+}
+
+export function canUserManageGameMasters(role: GameMasterRole | null): boolean {
+  return role === "super_admin";
 }
 
 export type GameMasterAccessState = "loading" | "allowed" | "forbidden";

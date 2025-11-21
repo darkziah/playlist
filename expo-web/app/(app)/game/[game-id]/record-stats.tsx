@@ -10,6 +10,7 @@ import {
   ScrollView,
   View,
   Alert,
+  Pressable,
 } from "react-native";
 import {
   ArrowLeftIcon,
@@ -21,6 +22,8 @@ import {
 import { fetchGameById, fetchRoster } from "@/lib/games";
 import { canUpdateStats } from "@/lib/roles";
 import { auth } from "@/lib/firebase";
+import { useGameMasterAuth, canUserRecordStats } from "@/lib/gameMasterAuth";
+import { cn } from "@/lib/utils";
 import type { Game, PlayerEntry } from "shared";
 import {
   useActiveMatch,
@@ -71,7 +74,9 @@ export default function RecordStatsScreen() {
   const [roster, setRoster] = useState<PlayerEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [authorized, setAuthorized] = useState(false);
+  const { role, loading: authLoading } = useGameMasterAuth();
   const [scoringMode, setScoringMode] = useState<"custom" | "nba">("custom");
+  const [activeTab, setActiveTab] = useState<"A" | "B">("A");
 
   // Real-time match state
   const { activeMatch, loading: matchLoading } = useActiveMatch(gameId);
@@ -100,17 +105,10 @@ export default function RecordStatsScreen() {
 
   // Check authorization
   useEffect(() => {
-    if (!auth.currentUser) {
-      setAuthorized(false);
-      setLoading(false);
-      return;
-    }
-
-    void canUpdateStats(auth.currentUser.uid).then((can) => {
-      setAuthorized(can);
-      setLoading(false);
-    });
-  }, []);
+    if (authLoading) return;
+    setAuthorized(canUserRecordStats(role));
+    setLoading(false);
+  }, [authLoading, role]);
 
   // Fetch game data
   useEffect(() => {
@@ -359,8 +357,8 @@ export default function RecordStatsScreen() {
     <View className="flex-1 bg-background">
       {/* Scoreboard */}
       <LiveScoreBoard
-        teamAName="Team A"
-        teamBName="Team B"
+        teamAName={activeMatch.teamA.name || "Team A"}
+        teamBName={activeMatch.teamB.name || "Team B"}
         teamAScore={teamAScore}
         teamBScore={teamBScore}
         formattedTime={formattedTime}
@@ -374,39 +372,83 @@ export default function RecordStatsScreen() {
         undoDisabled={recording || ending || !activeMatch.actions || activeMatch.actions.length === 0}
       />
 
+      {/* Team Tabs */}
+      <View className="flex-row px-4 mt-4 gap-2">
+        <Pressable
+          onPress={() => setActiveTab("A")}
+          className={cn(
+            "flex-1 py-3 rounded-xl border-2 items-center justify-center",
+            activeTab === "A"
+              ? "bg-primary border-primary"
+              : "bg-card border-border"
+          )}
+        >
+          <Text
+            className={cn(
+              "font-bold",
+              activeTab === "A" ? "text-primary-foreground" : "text-foreground"
+            )}
+          >
+            {activeMatch.teamA.name || "Team A"}
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setActiveTab("B")}
+          className={cn(
+            "flex-1 py-3 rounded-xl border-2 items-center justify-center",
+            activeTab === "B"
+              ? "bg-blue-500 border-blue-500"
+              : "bg-card border-border"
+          )}
+        >
+          <Text
+            className={cn(
+              "font-bold",
+              activeTab === "B" ? "text-white" : "text-foreground"
+            )}
+          >
+            {activeMatch.teamB.name || "Team B"}
+          </Text>
+        </Pressable>
+      </View>
+
       {/* Players */}
       <ScrollView className="flex-1 px-4 pt-4">
-        {/* Team A */}
-        <Text className="text-lg font-bold text-primary mb-3">
-          Team A
-        </Text>
-        {teamAPlayers.map((player) => (
-          <PlayerStatsCard
-            key={player.userId}
-            player={player}
-            team="A"
-            activeMatch={activeMatch}
-            onRecordStat={handleRecordStat}
-            disabled={recording || ending}
-            scoringMode={scoringMode}
-          />
-        ))}
-
-        {/* Team B */}
-        <Text className="text-lg font-bold text-blue-500 mb-3 mt-6">
-          Team B
-        </Text>
-        {teamBPlayers.map((player) => (
-          <PlayerStatsCard
-            key={player.userId}
-            player={player}
-            team="B"
-            activeMatch={activeMatch}
-            onRecordStat={handleRecordStat}
-            disabled={recording || ending}
-            scoringMode={scoringMode}
-          />
-        ))}
+        {activeTab === "A" ? (
+          <View>
+            <Text className="text-lg font-bold text-primary mb-3">
+              {activeMatch.teamA.name || "Team A"} Roster
+            </Text>
+            {teamAPlayers.map((player) => (
+              <PlayerStatsCard
+                key={player.userId}
+                player={player}
+                team="A"
+                activeMatch={activeMatch}
+                onRecordStat={handleRecordStat}
+                disabled={recording || ending}
+                scoringMode={scoringMode}
+              />
+            ))}
+          </View>
+        ) : (
+          <View>
+            <Text className="text-lg font-bold text-blue-500 mb-3">
+              {activeMatch.teamB.name || "Team B"} Roster
+            </Text>
+            {teamBPlayers.map((player) => (
+              <PlayerStatsCard
+                key={player.userId}
+                player={player}
+                team="B"
+                activeMatch={activeMatch}
+                onRecordStat={handleRecordStat}
+                disabled={recording || ending}
+                scoringMode={scoringMode}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Action Buttons */}
         <View className="gap-3 mt-6 mb-8">

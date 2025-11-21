@@ -16,7 +16,7 @@ import {
   updateRosterPayment,
 } from "@/lib/games";
 import type { Game, PaymentMethod, PaymentStatus, PlayerEntry, GameStatus } from "shared";
-import { useGameMasterAuth, loginGameMaster } from "@/lib/gameMasterAuth";
+import { useGameMasterAuth, loginGameMaster, canUserEditGame } from "@/lib/gameMasterAuth";
 import Loading from "@/components/loading";
 
 type GameFormValues = {
@@ -55,7 +55,7 @@ export default function GameEditScreen() {
   const gameIdParam = params["game-id"];
   const gameId = typeof gameIdParam === "string" ? gameIdParam : "";
 
-  const { isGameMaster, loading: gmLoading } = useGameMasterAuth();
+  const { isGameMaster, role, loading: gmLoading } = useGameMasterAuth();
 
   const [game, setGame] = useState<Game | null>(null);
   const [roster, setRoster] = useState<PlayerEntry[]>([]);
@@ -312,22 +312,22 @@ export default function GameEditScreen() {
     );
   }
 
-  if (!isGameMaster) {
+  if (!isGameMaster || !canUserEditGame(role)) {
     return (
       <View className="flex-1 items-center justify-center bg-background px-4">
         <Text variant="h3" className="mb-4 text-center text-foreground">
-          Game master access only
+          Access Denied
         </Text>
         <Text variant="muted" className="mb-6 text-center">
-          You must be signed in as a game master to edit games and manage the roster.
+          You do not have permission to edit games.
         </Text>
         <Button
           variant="outline"
           onPress={() => {
-            void loginGameMaster();
+            router.back();
           }}
         >
-          <Text>Sign in as game master</Text>
+          <Text>Go back</Text>
         </Button>
       </View>
     );

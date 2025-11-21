@@ -1,17 +1,20 @@
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useForm } from '@tanstack/react-form';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, ScrollView, TextInput, View } from 'react-native';
 import type { NewGamePayload } from 'shared';
 
-import { createGame } from '@/lib/games';
 import {
-  createGameMasterInvite,
+  createGame,
+} from '@/lib/games';
+import {
+  promoteToGameMaster,
   loginGameMaster,
   logoutGameMaster,
   useGameMasterAuth,
+  type GameMasterRole,
 } from '@/lib/gameMasterAuth';
 
 const SCREEN_OPTIONS = {
@@ -49,7 +52,8 @@ function DateTimeInputField({ value, onChangeText, editable }: DateTimeInputProp
 }
 
 export default function Screen() {
-  const { user, isGameMaster, loading } = useGameMasterAuth();
+  const { user, isGameMaster, role, loading } = useGameMasterAuth();
+  const router = useRouter();
 
   const form = useForm({
     defaultValues: {
@@ -77,10 +81,11 @@ export default function Screen() {
   const [createPending, setCreatePending] = useState(false);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
 
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteLink, setInviteLink] = useState<string | null>(null);
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [invitePending, setInvitePending] = useState(false);
+  const [promoteUid, setPromoteUid] = useState('');
+  const [promoteRole, setPromoteRole] = useState<GameMasterRole>('scorer');
+  const [promoteError, setPromoteError] = useState<string | null>(null);
+  const [promoteSuccess, setPromoteSuccess] = useState<string | null>(null);
+  const [promotePending, setPromotePending] = useState(false);
 
   const handleCreateGame = async () => {
     const values = form.state.values as {
@@ -169,23 +174,19 @@ export default function Screen() {
     }
   };
 
-  const handleCreateInvite = async () => {
-    if (!inviteEmail.trim()) return;
-    setInvitePending(true);
-    setInviteError(null);
-    setInviteLink(null);
+  const handlePromoteUser = async () => {
+    if (!promoteUid.trim()) return;
+    setPromotePending(true);
+    setPromoteError(null);
+    setPromoteSuccess(null);
     try {
-      const token = await createGameMasterInvite(inviteEmail.trim());
-      const origin =
-        typeof window !== 'undefined' && window.location.origin
-          ? window.location.origin
-          : '';
-      setInviteLink(origin ? `${origin}/invite/${token}` : `/invite/${token}`);
-      setInviteEmail('');
+      await promoteToGameMaster(promoteUid.trim(), promoteRole);
+      setPromoteSuccess('User promoted successfully.');
+      setPromoteUid('');
     } catch (e: any) {
-      setInviteError(e?.message ?? 'Unable to create invite.');
+      setPromoteError(e?.message ?? 'Unable to promote user.');
     } finally {
-      setInvitePending(false);
+      setPromotePending(false);
     }
   };
 
@@ -248,255 +249,272 @@ export default function Screen() {
             </View>
           </View>
 
-          <View className="mt-6 flex flex-col gap-8 lg:flex-row">
-            <View className="flex-1 gap-4 rounded-2xl border border-border bg-card/95 p-5">
-              <Text variant="small" className="uppercase tracking-[0.2em] text-destructive">
-                New game
-              </Text>
-              <Text className="text-lg font-semibold text-foreground">
-                Create upcoming game
-              </Text>
-              <Text variant="small" className="text-muted-foreground">
-                Publish a new session with schedule, price, and player limits.
-              </Text>
-              <View className="mt-4 gap-3">
-                <form.Field
-                  name="title"
-                  children={(field) => (
-                    <View className="gap-1">
-                      <Text variant="small">Title</Text>
-                      <TextInput
-                        className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                        value={field.state.value}
-                        onChangeText={field.handleChange}
-                        placeholder="e.g. Friday Night Match"
-                        placeholderTextColor="rgba(148, 163, 184, 1)"
-                        editable={!createPending}
-                      />
-                    </View>
-                  )}
-                />
-                <form.Field
-                  name="description"
-                  children={(field) => (
-                    <View className="gap-1">
-                      <Text variant="small">Description</Text>
-                      <TextInput
-                        className="min-h-[80px] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                        multiline
-                        value={field.state.value}
-                        onChangeText={field.handleChange}
-                        placeholder="Share format, rules, or anything players should know"
-                        placeholderTextColor="rgba(148, 163, 184, 1)"
-                        editable={!createPending}
-                      />
-                    </View>
-                  )}
-                />
-                <View className="flex-row flex-wrap gap-3">
-                  <View className="flex-1 min-w-[220px]">
-                    <form.Field
-                      name="dateTime"
-                      children={(field) => (
-                        <View className="gap-1">
-                          <Text variant="small">Date & time</Text>
-                          <DateTimeInputField
-                            value={field.state.value}
-                            onChangeText={field.handleChange}
-                            editable={!createPending}
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-                  <View className="flex-1 min-w-[220px]">
-                    <form.Field
-                      name="location"
-                      children={(field) => (
-                        <View className="gap-1">
-                          <Text variant="small">Location</Text>
-                          <TextInput
-                            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                            value={field.state.value}
-                            onChangeText={field.handleChange}
-                            placeholder="Court or venue name"
-                            placeholderTextColor="rgba(148, 163, 184, 1)"
-                            editable={!createPending}
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-                </View>
-                <View className="flex-row flex-wrap gap-3">
-                  <View className="w-32">
-                    <form.Field
-                      name="maxPlayers"
-                      children={(field) => (
-                        <View className="gap-1">
-                          <Text variant="small">Max players</Text>
-                          <TextInput
-                            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                            keyboardType="numeric"
-                            value={field.state.value}
-                            onChangeText={field.handleChange}
-                            editable={!createPending}
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-                  <View className="w-32">
-                    <form.Field
-                      name="hours"
-                      children={(field) => (
-                        <View className="gap-1">
-                          <Text variant="small">Duration (hours)</Text>
-                          <TextInput
-                            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                            keyboardType="numeric"
-                            value={field.state.value}
-                            onChangeText={field.handleChange}
-                            editable={!createPending}
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-                  <View className="w-40">
-                    <form.Field
-                      name="price"
-                      children={(field) => (
-                        <View className="gap-1">
-                          <Text variant="small">Price per player</Text>
-                          <TextInput
-                            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                            keyboardType="decimal-pad"
-                            value={field.state.value}
-                            onChangeText={field.handleChange}
-                            editable={!createPending}
-                          />
-                        </View>
-                      )}
-                    />
-                  </View>
-                  <View className="w-40">
-                    <form.Field
-                      name="status"
-                      children={(field) => (
-                        <View className="gap-1">
-                          <Text variant="small">Status</Text>
-                          {Platform.OS === 'web' ? (
-                            <select
-                              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground w-full"
+        </View>
+
+        {
+          (role === 'admin' || role === 'super_admin') && (
+            <View className="mt-6 flex flex-col gap-8 lg:flex-row">
+              <View className="flex-1 gap-4 rounded-2xl border border-border bg-card/95 p-5">
+                <Text variant="small" className="uppercase tracking-[0.2em] text-destructive">
+                  New game
+                </Text>
+                <Text className="text-lg font-semibold text-foreground">
+                  Create upcoming game
+                </Text>
+                <Text variant="small" className="text-muted-foreground">
+                  Publish a new session with schedule, price, and player limits.
+                </Text>
+                <View className="mt-4 gap-3">
+                  <form.Field
+                    name="title"
+                    children={(field) => (
+                      <View className="gap-1">
+                        <Text variant="small">Title</Text>
+                        <TextInput
+                          className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                          value={field.state.value}
+                          onChangeText={field.handleChange}
+                          placeholder="e.g. Friday Night Match"
+                          placeholderTextColor="rgba(148, 163, 184, 1)"
+                          editable={!createPending}
+                        />
+                      </View>
+                    )}
+                  />
+                  <form.Field
+                    name="description"
+                    children={(field) => (
+                      <View className="gap-1">
+                        <Text variant="small">Description</Text>
+                        <TextInput
+                          className="min-h-[80px] rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                          multiline
+                          value={field.state.value}
+                          onChangeText={field.handleChange}
+                          placeholder="Share format, rules, or anything players should know"
+                          placeholderTextColor="rgba(148, 163, 184, 1)"
+                          editable={!createPending}
+                        />
+                      </View>
+                    )}
+                  />
+                  <View className="flex-row flex-wrap gap-3">
+                    <View className="flex-1 min-w-[220px]">
+                      <form.Field
+                        name="dateTime"
+                        children={(field) => (
+                          <View className="gap-1">
+                            <Text variant="small">Date & time</Text>
+                            <DateTimeInputField
                               value={field.state.value}
-                              onChange={(event) =>
-                                field.handleChange(
-                                  event.target.value as NewGamePayload['status'],
-                                )
-                              }
-                              disabled={createPending}
-                            >
-                              <option value="draft">Draft</option>
-                              <option value="scheduled">Scheduled</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
-                          ) : (
+                              onChangeText={field.handleChange}
+                              editable={!createPending}
+                            />
+                          </View>
+                        )}
+                      />
+                    </View>
+                    <View className="flex-1 min-w-[220px]">
+                      <form.Field
+                        name="location"
+                        children={(field) => (
+                          <View className="gap-1">
+                            <Text variant="small">Location</Text>
                             <TextInput
                               className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
                               value={field.state.value}
                               onChangeText={field.handleChange}
-                              editable={!createPending}
-                              placeholder="draft | scheduled | completed | cancelled"
+                              placeholder="Court or venue name"
                               placeholderTextColor="rgba(148, 163, 184, 1)"
+                              editable={!createPending}
                             />
-                          )}
-                        </View>
-                      )}
-                    />
-                  </View>
-                </View>
-                {formError ? (
-                  <Text variant="small" className="text-destructive">
-                    {formError}
-                  </Text>
-                ) : null}
-                {createSuccess ? (
-                  <Text variant="small" className="text-emerald-500">
-                    {createSuccess}
-                  </Text>
-                ) : null}
-                <Button
-                  className="mt-2 w-full"
-                  disabled={createPending}
-                  onPress={() => {
-                    void handleCreateGame();
-                  }}
-                >
-                  <Text>{createPending ? 'Creating game' : 'Create game'}</Text>
-                </Button>
-              </View>
-
-              <View className="mt-6 flex-1 gap-4 rounded-2xl border border-border bg-card/95 p-5">
-                <Text variant="small" className="uppercase tracking-[0.2em] text-destructive">
-                  Invites
-                </Text>
-                <Text className="text-lg font-semibold text-foreground">
-                  Invite another game master
-                </Text>
-                <Text variant="small" className="text-muted-foreground">
-                  Generate a one-time invite link and share it with trusted collaborators.
-                </Text>
-                <View className="mt-4 gap-3">
-                  <Text variant="small">Invite email</Text>
-                  <View className="flex-row gap-2">
-                    <TextInput
-                      className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
-                      keyboardType="email-address"
-                      value={inviteEmail}
-                      onChangeText={(value) => {
-                        setInviteEmail(value);
-                        setInviteError(null);
-                      }}
-                      editable={!invitePending}
-                      placeholder="new-gamemaster@example.com"
-                      placeholderTextColor="rgba(148, 163, 184, 1)"
-                    />
-                    <Button
-                      variant="outline"
-                      disabled={invitePending || !inviteEmail.trim()}
-                      onPress={() => {
-                        void handleCreateInvite();
-                      }}
-                    >
-                      <Text>{invitePending ? 'Generating' : 'Create invite'}</Text>
-                    </Button>
-                  </View>
-                  {inviteError ? (
-                    <Text variant="small" className="text-destructive">
-                      {inviteError}
-                    </Text>
-                  ) : null}
-                  {inviteLink ? (
-                    <View className="gap-1">
-                      <Text variant="small" className="text-muted-foreground">
-                        Share this link with the new game master:
-                      </Text>
-                      <TextInput
-                        className="rounded-md border border-border bg-background px-3 py-2 text-xs text-foreground"
-                        value={inviteLink}
-                        editable={false}
-                        selectTextOnFocus
+                          </View>
+                        )}
                       />
                     </View>
+                  </View>
+                  <View className="flex-row flex-wrap gap-3">
+                    <View className="w-32">
+                      <form.Field
+                        name="maxPlayers"
+                        children={(field) => (
+                          <View className="gap-1">
+                            <Text variant="small">Max players</Text>
+                            <TextInput
+                              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                              keyboardType="numeric"
+                              value={field.state.value}
+                              onChangeText={field.handleChange}
+                              editable={!createPending}
+                            />
+                          </View>
+                        )}
+                      />
+                    </View>
+                    <View className="w-32">
+                      <form.Field
+                        name="hours"
+                        children={(field) => (
+                          <View className="gap-1">
+                            <Text variant="small">Duration (hours)</Text>
+                            <TextInput
+                              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                              keyboardType="numeric"
+                              value={field.state.value}
+                              onChangeText={field.handleChange}
+                              editable={!createPending}
+                            />
+                          </View>
+                        )}
+                      />
+                    </View>
+                    <View className="w-40">
+                      <form.Field
+                        name="price"
+                        children={(field) => (
+                          <View className="gap-1">
+                            <Text variant="small">Price per player</Text>
+                            <TextInput
+                              className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                              keyboardType="decimal-pad"
+                              value={field.state.value}
+                              onChangeText={field.handleChange}
+                              editable={!createPending}
+                            />
+                          </View>
+                        )}
+                      />
+                    </View>
+                    <View className="w-40">
+                      <form.Field
+                        name="status"
+                        children={(field) => (
+                          <View className="gap-1">
+                            <Text variant="small">Status</Text>
+                            {Platform.OS === 'web' ? (
+                              <select
+                                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground w-full"
+                                value={field.state.value}
+                                onChange={(event) =>
+                                  field.handleChange(
+                                    event.target.value as NewGamePayload['status'],
+                                  )
+                                }
+                                disabled={createPending}
+                              >
+                                <option value="draft">Draft</option>
+                                <option value="scheduled">Scheduled</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            ) : (
+                              <TextInput
+                                className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                                value={field.state.value}
+                                onChangeText={field.handleChange}
+                                editable={!createPending}
+                                placeholder="draft | scheduled | completed | cancelled"
+                                placeholderTextColor="rgba(148, 163, 184, 1)"
+                              />
+                            )}
+                          </View>
+                        )}
+                      />
+                    </View>
+                  </View>
+                  {formError ? (
+                    <Text variant="small" className="text-destructive">
+                      {formError}
+                    </Text>
                   ) : null}
+                  {createSuccess ? (
+                    <Text variant="small" className="text-emerald-500">
+                      {createSuccess}
+                    </Text>
+                  ) : null}
+                  <Button
+                    className="mt-2 w-full"
+                    disabled={createPending}
+                    onPress={() => {
+                      void handleCreateGame();
+                    }}
+                  >
+                    <Text>{createPending ? 'Creating game' : 'Create game'}</Text>
+                  </Button>
                 </View>
+
+                {role === 'super_admin' && (
+                  <View className="mt-6 flex-1 gap-4 rounded-2xl border border-border bg-card/95 p-5">
+                    <Text variant="small" className="uppercase tracking-[0.2em] text-destructive">
+                      Promote User
+                    </Text>
+                    <Text className="text-lg font-semibold text-foreground">
+                      Add new game master
+                    </Text>
+                    <Text variant="small" className="text-muted-foreground">
+                      Enter the User ID (UID) to promote them to a game master role.
+                    </Text>
+                    <View className="mt-4 gap-3">
+                      <Text variant="small">User ID & Role</Text>
+                      <View className="flex-row gap-2">
+                        <TextInput
+                          className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                          value={promoteUid}
+                          onChangeText={(value) => {
+                            setPromoteUid(value);
+                            setPromoteError(null);
+                            setPromoteSuccess(null);
+                          }}
+                          editable={!promotePending}
+                          placeholder="User UID"
+                          placeholderTextColor="rgba(148, 163, 184, 1)"
+                        />
+                        <View className="w-32">
+                          {Platform.OS === 'web' ? (
+                            <select
+                              className="h-full w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                              value={promoteRole}
+                              onChange={(e) => setPromoteRole(e.target.value as GameMasterRole)}
+                              disabled={promotePending}
+                            >
+                              <option value="scorer">Scorer</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          ) : (
+                            <View className="h-full justify-center rounded-md border border-border bg-background px-3">
+                              <Text>{promoteRole}</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Button
+                          variant="outline"
+                          disabled={promotePending || !promoteUid.trim()}
+                          onPress={() => {
+                            void handlePromoteUser();
+                          }}
+                        >
+                          <Text>{promotePending ? 'Promoting' : 'Promote'}</Text>
+                        </Button>
+                      </View>
+                      {promoteError ? (
+                        <Text variant="small" className="text-destructive">
+                          {promoteError}
+                        </Text>
+                      ) : null}
+                      {promoteSuccess ? (
+                        <Text variant="small" className="text-emerald-500">
+                          {promoteSuccess}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                )}
               </View>
             </View>
-          </View>
-        </View>
-      </ScrollView>
+          )
+        }
+
+      </ScrollView >
     );
   }
 

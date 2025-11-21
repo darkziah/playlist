@@ -16,6 +16,14 @@ export default function Root({ children }: PropsWithChildren) {
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no"
         />
 
+        {/* Default Open Graph tags */}
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Playlist" />
+        <meta property="og:description" content="Join the game on Playlist." />
+        {/* TODO: Replace with your actual absolute domain URL for the image to work in messengers */}
+        <meta property="og:image" content="https://playlist-slamdrunk.web.app/icon.png" />
+
+
         {/*
           Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
           However, body scrolling is often nice to have for mobile web. If you want to enable it, remove this line.

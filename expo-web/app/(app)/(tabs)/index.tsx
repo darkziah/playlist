@@ -19,7 +19,7 @@ type StatusTab = GameStatus;
 
 export default function Screen() {
   const router = useRouter();
-  const { isGameMaster } = useGameMasterAuth();
+  const { isGameMaster, role } = useGameMasterAuth();
   const [statusTab, setStatusTab] = useState<StatusTab>('scheduled');
   const { colorScheme, toggleColorScheme } = useColorScheme();
 
@@ -128,7 +128,7 @@ export default function Screen() {
   return (
     <>
       <Stack.Screen options={SCREEN_OPTIONS} />
-      <View className="flex-1 bg-background px-4 py-6">
+      <View className="flex-1 px-4 py-6">
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
             <Loading className="text-3xl" />
@@ -146,7 +146,7 @@ export default function Screen() {
                 <TabsTrigger className='flex-1 dark:text-white' value="scheduled">Scheduled</TabsTrigger>
                 <TabsTrigger className='flex-1 dark:text-white' value="completed">Completed</TabsTrigger>
                 <TabsTrigger className='flex-1 dark:text-white' value="cancelled">Cancelled</TabsTrigger>
-                {isGameMaster ? (
+                {isGameMaster && role !== "scorer" ? (
                   <TabsTrigger className='flex-1 dark:text-white' value="draft">Draft</TabsTrigger>
                 ) : null}
               </TabsList>

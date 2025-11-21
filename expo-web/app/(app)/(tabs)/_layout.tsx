@@ -5,7 +5,7 @@ import { useGameMasterAuth } from '@/lib/gameMasterAuth';
 
 export default function Layout() {
 
-  const { user, isGameMaster } = useGameMasterAuth();
+  const { user, isGameMaster, role } = useGameMasterAuth();
 
   return (
     <Tabs key={user?.uid}>
@@ -21,7 +21,7 @@ export default function Layout() {
         options={{
           tabBarIcon: ({ color }) => <Activity color={color} />,
           tabBarLabel: "Dashboard",
-          href: isGameMaster ? "/(app)/(tabs)/dashboard" : null,
+          href: isGameMaster && (role === 'admin' || role === 'super_admin') ? "/(app)/(tabs)/dashboard" : null,
         }}
       />
       <Tabs.Screen

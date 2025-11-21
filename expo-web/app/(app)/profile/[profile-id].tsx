@@ -5,8 +5,10 @@ import { PlayerStatsCard } from "@/components/PlayerStatsCard";
 import { ShootingPercentageBar } from "@/components/ShootingPercentageBar";
 import { GameHistoryCard } from "@/components/GameHistoryCard";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import Head from "expo-router/head";
+import * as Linking from "expo-linking";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, Share, View } from "react-native";
 import {
   ArrowLeftIcon,
   TrophyIcon,
@@ -16,6 +18,7 @@ import {
   ZapIcon,
   TrendingUpIcon,
   HistoryIcon,
+  ShareIcon,
 } from "lucide-react-native";
 
 import {
@@ -95,6 +98,25 @@ export default function PlayerProfileScreen() {
     });
   }, [profileId]);
 
+  const handleShare = async () => {
+    if (!profile) return;
+    try {
+      const profileUrl = Linking.createURL(`/profile/${profileId}`);
+      const shareMessage = displayName
+        ? `Check out ${displayName}'s profile on Playlist`
+        : `Check out this player profile on Playlist`;
+      await Share.share({
+        message: shareMessage,
+        title: displayName || "Player Profile",
+        url: profileUrl,
+      }, {
+        dialogTitle: displayName || "Player Profile"
+      });
+    } catch (e: any) {
+      console.error("Unable to share profile.", e);
+    }
+  };
+
   if (loading) {
     return (
       <View className="flex-1 items-center justify-center bg-background">
@@ -156,7 +178,20 @@ export default function PlayerProfileScreen() {
             >
               <Icon as={ArrowLeftIcon} className="text-foreground" />
             </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full bg-card"
+              onPress={handleShare}
+            >
+              <Icon as={ShareIcon} className="text-foreground" />
+            </Button>
           </View>
+          <Head>
+            <meta property="og:title" content={displayName || username || "Player Profile"} />
+            <meta property="og:description" content={`View ${displayName || username}'s basketball stats and game history on Playlist`} />
+            <meta property="og:url" content={Linking.createURL(`/profile/${profileId}`)} />
+          </Head>
 
           <View className="items-center">
             {profile.photoUrl ? (
