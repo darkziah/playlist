@@ -9,7 +9,7 @@
     "./server",
     "./client",
     "./shared",
-    "./expo-web"
+    "./client-admin"
   ],
   "scripts": {
     "dev": "turbo dev",
