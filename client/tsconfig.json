@@ -1,11 +1,11 @@
 {
-  "extends": "../tsconfig.json",
-  "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.app.json"}],
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
-      "baseUrl": ".",
-      "paths": {
-        "@/*": ["./src/*"]
-      }
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["*"]
     }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts", "nativewind-env.d.ts"]
 }

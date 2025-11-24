@@ -1,92 +1,73 @@
-# React + TypeScript + Vite
+# Minimal Template
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a [React Native](https://reactnative.dev/) project built with [Expo](https://expo.dev/) and [React Native Reusables](https://reactnativereusables.com).
 
-Currently, two official plugins are available:
+It was initialized using the following command:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+npx @react-native-reusables/cli@latest init -t expo
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Getting Started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+To run the development server:
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+    npm run dev
+    # or
+    yarn dev
+    # or
+    pnpm dev
+    # or
+    bun dev
 ```
+
+This will start the Expo Dev Server. Open the app in:
+
+- **iOS**: press `i` to launch in the iOS simulator _(Mac only)_
+- **Android**: press `a` to launch in the Android emulator
+- **Web**: press `w` to run in a browser
+
+You can also scan the QR code using the [Expo Go](https://expo.dev/go) app on your device. This project fully supports running in Expo Go for quick testing on physical devices.
+
+## Adding components
+
+You can add more reusable components using the CLI:
+
+```bash
+npx react-native-reusables/cli@latest add [...components]
+```
+
+> e.g. `npx react-native-reusables/cli@latest add input textarea`
+
+If you don't specify any component names, you'll be prompted to select which components to add interactively. Use the `--all` flag to install all available components at once.
+
+## Project Features
+
+- ⚛️ Built with [Expo Router](https://expo.dev/router)
+- 🎨 Styled with [Tailwind CSS](https://tailwindcss.com/) via [Nativewind](https://www.nativewind.dev/)
+- 📦 UI powered by [React Native Reusables](https://github.com/founded-labs/react-native-reusables)
+- 🚀 New Architecture enabled
+- 🔥 Edge to Edge enabled
+- 📱 Runs on iOS, Android, and Web
+
+## Learn More
+
+To dive deeper into the technologies used:
+
+- [React Native Docs](https://reactnative.dev/docs/getting-started)
+- [Expo Docs](https://docs.expo.dev/)
+- [Nativewind Docs](https://www.nativewind.dev/)
+- [React Native Reusables](https://reactnativereusables.com)
+
+## Deploy with EAS
+
+The easiest way to deploy your app is with [Expo Application Services (EAS)](https://expo.dev/eas).
+
+- [EAS Build](https://docs.expo.dev/build/introduction/)
+- [EAS Updates](https://docs.expo.dev/eas-update/introduction/)
+- [EAS Submit](https://docs.expo.dev/submit/introduction/)
 
 ---
 
-## Game scheduling feature
-
-This client implements a Firestore-backed game scheduling and roster flow.
-
-### Firebase configuration
-
-Set the following environment variables in `client/.env`:
-
-- `VITE_FIREBASE_API_KEY`
-- `VITE_FIREBASE_AUTH_DOMAIN`
-- `VITE_FIREBASE_PROJECT_ID`
-- `VITE_FIREBASE_STORAGE_BUCKET`
-- `VITE_FIREBASE_MESSAGING_SENDER_ID`
-- `VITE_FIREBASE_APP_ID`
-
-Firestore collections used:
-
-- `games` – stores each scheduled game (title, description, `dateTime`, `maxPlayers`, `price`, `status`, `filledSlots`, timestamps).
-- `games/{gameId}/gameRosters` – roster entries for each game (`name`, optional `notes`, `queueNumber`, `createdAt`).
-
-The client expects security rules that:
-
-- Allow trusted game masters to create and update documents in `games`.
-- Allow players to **append** roster entries in `gameRosters` but not overwrite others.
-- Enforce `filledSlots <= maxPlayers` when joining (the client also enforces this via a transaction).
-
-### Color palette
-
-The UI for scheduling and roster views uses this palette and exposes it via CSS variables in `src/index.css`:
-
-Run the client locally with:
-
-```bash
-bun run dev:client
-```
+If you enjoy using React Native Reusables, please consider giving it a ⭐ on [GitHub](https://github.com/founded-labs/react-native-reusables). Your support means a lot!
