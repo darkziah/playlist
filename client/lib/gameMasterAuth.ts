@@ -1,18 +1,11 @@
 import { useEffect, useState } from "react";
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  type User,
-} from "firebase/auth";
+import { authClient, syncFirebaseSession } from "@/lib/auth-client";
 import {
   collection,
   doc,
   getDoc,
   setDoc,
   serverTimestamp,
-  Timestamp,
 } from "firebase/firestore";
 
 import { auth, db } from "@/lib/firebase";
@@ -22,13 +15,16 @@ const gameMastersCollection = collection(db, "gameMasters");
 export type GameMasterRole = "super_admin" | "admin" | "scorer";
 
 export type GameMasterAuthState = {
-  user: User | null;
+  user: any | null;
   isGameMaster: boolean;
   role: GameMasterRole | null;
   loading: boolean;
 };
 
 export function useGameMasterAuth(): GameMasterAuthState {
+  const { data: session, isPending: authLoading } = authClient.useSession();
+  const user = session?.user || null;
+
   const [state, setState] = useState<GameMasterAuthState>({
     user: null,
     isGameMaster: false,
@@ -37,22 +33,28 @@ export function useGameMasterAuth(): GameMasterAuthState {
   });
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setState({
-          user: null,
-          isGameMaster: false,
-          role: null,
-          loading: false,
-        });
-        return;
-      }
+    syncFirebaseSession();
+  }, [session]);
 
+  useEffect(() => {
+    if (authLoading) return;
+    
+    if (!user) {
+      setState({
+        user: null,
+        isGameMaster: false,
+        role: null,
+        loading: false,
+      });
+      return;
+    }
+
+    async function checkRole() {
       try {
-        const gmDoc = await getDoc(doc(gameMastersCollection, user.uid));
+        if (!user) return; // Should not happen due to check above
+        const gmDoc = await getDoc(doc(gameMastersCollection, user.id));
         if (gmDoc.exists()) {
           const data = gmDoc.data();
-          // Default to 'admin' for existing users without a role field
           const role = (data.role as GameMasterRole) || "admin";
           setState({
             user,
@@ -76,10 +78,10 @@ export function useGameMasterAuth(): GameMasterAuthState {
           loading: false,
         });
       }
-    });
+    }
 
-    return unsub;
-  }, []);
+    checkRole();
+  }, [user, authLoading]);
 
   return state;
 }
@@ -91,21 +93,25 @@ export type LoginGameMasterOptions = {
 export async function loginGameMaster(
   options?: LoginGameMasterOptions,
 ): Promise<void> {
-  const provider = new GoogleAuthProvider();
   if (options?.redirectToDashboard) {
     requestDashboardRedirectPreference();
   }
-  await signInWithPopup(auth, provider);
+  await authClient.signIn.social({
+    provider: "google",
+    callbackURL: "/"
+  });
 }
 
 export async function logoutGameMaster(): Promise<void> {
-  await signOut(auth);
+  await authClient.signOut();
 }
 
 export async function promoteToGameMaster(
   uid: string,
   role: GameMasterRole,
 ): Promise<void> {
+  // Check if current user is signed in (via Better Auth or Firebase sync)
+  // For admin operations, we might rely on Firebase Auth being synced.
   if (!auth.currentUser) {
     throw new Error("You must be signed in to promote users.");
   }
@@ -119,11 +125,6 @@ export async function promoteToGameMaster(
   }
 
   const gmRef = doc(gameMastersCollection, uid);
-
-  // We might not have the email since we are promoting by UID, 
-  // but we can try to get it from the profile if it exists there (it usually doesn't for privacy),
-  // or we just rely on the UID/Username for identification.
-  // For now, we'll just set the role.
 
   await setDoc(
     gmRef,

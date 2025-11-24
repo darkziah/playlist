@@ -1,9 +1,13 @@
+import type { GameStatus } from "./schema";
+
+export * from "./schema";
+
 export type ApiResponse = {
   message: string;
   success: true;
 };
 
-export type GameStatus = "draft" | "scheduled" | "completed" | "cancelled";
+// GameStatus is now imported from schema.ts
 
 export type TimestampString = string;
 

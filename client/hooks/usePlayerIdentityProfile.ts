@@ -1,7 +1,5 @@
-import { onAuthStateChanged, type User } from "firebase/auth";
 import { useEffect, useState } from "react";
-
-import { auth } from "@/lib/firebase";
+import { authClient, syncFirebaseSession } from "@/lib/auth-client";
 import {
   hasCompleteIdentityProfile,
   subscribeToPlayerIdentityProfile,
@@ -9,26 +7,23 @@ import {
 } from "@/lib/playerProfile";
 
 export type PlayerIdentityProfileState = {
-  user: User | null;
+  user: any | null; // better-auth user
   profile: PlayerIdentityProfileDoc | null;
   loading: boolean;
   profileComplete: boolean;
 };
 
 export function usePlayerIdentityProfile(): PlayerIdentityProfileState {
-  const [user, setUser] = useState<User | null>(null);
+  const { data: session, isPending: authLoading } = authClient.useSession();
+  const user = session?.user || null;
+
   const [profile, setProfile] =
     useState<PlayerIdentityProfileDoc | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (nextUser) => {
-      setUser(nextUser);
-      setAuthLoading(false);
-    });
-    return unsub;
-  }, []);
+    syncFirebaseSession();
+  }, [session]);
 
   useEffect(() => {
     if (!user) {
@@ -38,7 +33,7 @@ export function usePlayerIdentityProfile(): PlayerIdentityProfileState {
     }
 
     setProfileLoading(true);
-    const unsub = subscribeToPlayerIdentityProfile(user.uid, (doc) => {
+    const unsub = subscribeToPlayerIdentityProfile(user.id, (doc) => {
       setProfile(doc);
       setProfileLoading(false);
     });
@@ -46,7 +41,7 @@ export function usePlayerIdentityProfile(): PlayerIdentityProfileState {
     return () => {
       unsub();
     };
-  }, [user?.uid]);
+  }, [user?.id]);
 
   return {
     user,
