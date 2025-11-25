@@ -1,7 +1,8 @@
 import type { Timestamp } from "firebase/firestore";
 
 // Common Types
-export type UserRole = "owner" | "admin" | "player" | "follower";
+// Better Auth organization roles (org-level membership)
+export type UserRole = "owner" | "admin" | "member";
 export type SubscriptionTier = "free" | "starter" | "pro" | "enterprise";
 export type SubscriptionStatus = "active" | "past_due" | "canceled";
 export type JoinType = "open" | "approval_required" | "invite_only";
