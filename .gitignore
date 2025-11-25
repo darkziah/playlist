@@ -41,3 +41,6 @@ pnpm-debug.log*
 bun.lockb
 .turbo
 server/private-key.json
+
+# Openspec
+openspec
