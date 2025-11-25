@@ -34,6 +34,7 @@ export function usePlayerIdentityProfile(): PlayerIdentityProfileState {
 
     setProfileLoading(true);
     const unsub = subscribeToPlayerIdentityProfile(user.id, (doc) => {
+      console.log("🚀 ~ usePlayerIdentityProfile ~ doc:", doc, user.id)
       setProfile(doc);
       setProfileLoading(false);
     });

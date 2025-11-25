@@ -5,8 +5,8 @@ import { View, Image, Platform } from 'react-native';
 import { useWizard } from '@/app/wizard/_layout';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { auth } from '@/lib/firebase';
-import { uploadPlayerProfilePhoto } from '@/lib/playerProfile';
+import { authClient } from '@/lib/auth-client';
+import { savePlayerIdentityProfile, uploadPlayerProfilePhoto } from '@/lib/playerProfile';
 
 export default function Step2ProfilePhoto() {
   const router = useRouter();
@@ -37,23 +37,70 @@ export default function Step2ProfilePhoto() {
   };
 
   const handleNext = async () => {
-    if (selectedFile && auth.currentUser) {
-      setUploading(true);
-      try {
-        const photoUrl = await uploadPlayerProfilePhoto(auth.currentUser.uid, selectedFile);
-        updateData({ profilePhotoUrl: photoUrl });
-      } catch (error) {
-        console.error('Error uploading photo:', error);
-      } finally {
-        setUploading(false);
-      }
+    const { data: session } = await authClient.getSession();
+    const userId = session?.user.id;
+
+    if (!userId) {
+      router.replace('/');
+      return;
     }
-    router.push('/wizard/3');
+
+    setUploading(true);
+
+    try {
+      let photoUrl = data.profilePhotoUrl;
+
+      if (selectedFile) {
+        photoUrl = await uploadPlayerProfilePhoto(userId, selectedFile);
+        updateData({ profilePhotoUrl: photoUrl });
+      }
+
+      await savePlayerIdentityProfile({
+        userId,
+        username: data.username,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        dateOfBirth: data.dob,
+        barangay: data.location,
+        photoUrl: photoUrl || null,
+      });
+      router.push('/wizard/3');
+    } catch (error) {
+      console.error('Error completing profile:', error);
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleSkip = () => {
-    updateData({ profilePhotoUrl: null });
-    router.push('/wizard/3');
+  const handleSkip = async () => {
+    const { data: session } = await authClient.getSession();
+    const userId = session?.user.id;
+
+    if (!userId) {
+      router.replace('/');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      updateData({ profilePhotoUrl: null });
+
+      await savePlayerIdentityProfile({
+        userId,
+        username: data.username,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        dateOfBirth: data.dob,
+        barangay: data.location,
+        photoUrl: null,
+      });
+      router.push('/wizard/3');
+    } catch (error) {
+      console.error('Error completing profile:', error);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (

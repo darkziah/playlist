@@ -1,19 +1,13 @@
 import confetti from 'canvas-confetti';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { View } from 'react-native';
 
-import { useWizard } from '@/app/wizard/_layout';
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import { auth } from '@/lib/firebase';
-import { savePlayerIdentityProfile } from '@/lib/playerProfile';
 
 export default function Step3Welcome() {
   const router = useRouter();
-  const { data } = useWizard();
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     // Fire confetti on mount
@@ -48,29 +42,8 @@ export default function Step3Welcome() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleFinish = async () => {
-    if (!auth.currentUser) {
-      router.replace('/');
-      return;
-    }
-
-    setSaving(true);
-    try {
-      await savePlayerIdentityProfile({
-        userId: auth.currentUser.uid,
-        username: data.username,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        dateOfBirth: data.dob,
-        barangay: data.location,
-        photoUrl: data.profilePhotoUrl || undefined,
-      });
-      setSaved(true);
-      router.replace('/');
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      setSaving(false);
-    }
+  const handleFinish = () => {
+    router.replace('/');
   };
 
   return (
@@ -84,8 +57,8 @@ export default function Step3Welcome() {
           </Text>
         </View>
 
-        <Button onPress={handleFinish} disabled={saving || saved} size="lg">
-          <Text>{saving ? 'Saving...' : saved ? 'Redirecting...' : 'Get Started'}</Text>
+        <Button onPress={handleFinish} size="lg">
+          <Text>Get Started</Text>
         </Button>
       </View>
     </View>
