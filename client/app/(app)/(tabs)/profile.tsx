@@ -1,13 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Text } from '@/components/ui/text';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useForm } from '@tanstack/react-form';
 import { useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, TextInput, View } from 'react-native';
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { StarIcon } from 'lucide-react-native';
 
+import { authClient } from '@/lib/auth-client';
 import { auth } from '@/lib/firebase';
 import { usePlayerIdentityProfile } from '@/hooks/usePlayerIdentityProfile';
 import {
@@ -217,6 +218,38 @@ function EditableProfileForm({ userId, profile }: EditableProfileFormProps) {
   );
 }
 
+function LeagueList() {
+  const router = useRouter();
+  const { data: organizations, isPending, error } = authClient.useListOrganizations();
+
+  if (isPending) {
+    return <ActivityIndicator />;
+  }
+
+  if (error) {
+    return <Text variant="small" className="text-destructive">Failed to load leagues.</Text>;
+  }
+
+  return (
+    <View className="gap-2">
+      {organizations?.map((org) => (
+        <View key={org.id} className="flex-row items-center justify-between p-2 border border-border rounded-md">
+           <Text>{org.name}</Text>
+           <Button variant="ghost" size="sm" onPress={() => router.push(`/(app)/league/${org.id}/settings`)}>
+             <Text>Manage</Text>
+           </Button>
+        </View>
+      ))}
+      <Button variant="outline" onPress={() => router.push('/(app)/league/new')}>
+        <Text>Create League</Text>
+      </Button>
+      <Button variant="ghost" onPress={() => router.push('/(app)/league/join')}>
+        <Text>Join existing League</Text>
+      </Button>
+    </View>
+  );
+}
+
 export default function Screen() {
   const { user, profile, loading, profileComplete } =
     usePlayerIdentityProfile();
@@ -341,6 +374,13 @@ export default function Screen() {
                 </Text>
               )}
               <EditableProfileForm userId={user.uid} profile={profile} />
+            </View>
+
+            <View className="mt-2 gap-3 rounded-2xl border border-border bg-card/95 p-4">
+              <Text className="text-lg font-semibold text-foreground">
+                My Leagues
+              </Text>
+              <LeagueList />
             </View>
 
             <View className="mt-2 gap-3 rounded-2xl border border-border bg-card/95 p-4">

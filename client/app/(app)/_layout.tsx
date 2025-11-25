@@ -31,6 +31,7 @@ export default function AppLayout() {
       <Stack.Screen name="profile/[profile-id]" />
       <Stack.Screen name="game/[game-id]/index" options={{ headerShown: true }} />
       <Stack.Screen name="game/[game-id]/edit" options={{ headerShown: true }} />
+      <Stack.Screen name="league" options={{ headerShown: false }} />
 
     </Stack>
   );

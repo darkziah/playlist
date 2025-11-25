@@ -10,7 +10,7 @@ import { formatGameDate, formatGameTime } from '@/lib/time';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useGameMasterAuth } from '@/lib/gameMasterAuth';
 import Loading from '@/components/loading';
-import { useColorScheme } from 'nativewind';
+import { Uniwind, useUniwind } from 'uniwind';
 import { Moon, Sun } from 'lucide-react-native';
 
 const PAGE_SIZE = 10;
@@ -21,7 +21,8 @@ export default function Screen() {
   const router = useRouter();
   const { isGameMaster, role } = useGameMasterAuth();
   const [statusTab, setStatusTab] = useState<StatusTab>('scheduled');
-  const { colorScheme, toggleColorScheme } = useColorScheme();
+  const { theme } = useUniwind();
+  const colorScheme = theme === 'dark' ? 'dark' : 'light';
 
   const SCREEN_OPTIONS = {
     title: 'PlayList',
@@ -30,7 +31,9 @@ export default function Screen() {
       <Button
         variant="ghost"
         size="sm"
-        onPress={toggleColorScheme}
+        onPress={() => {
+          Uniwind.setTheme(colorScheme === 'dark' ? 'light' : 'dark');
+        }}
         className='mr-2'
       >
         {colorScheme === 'dark' ? (
