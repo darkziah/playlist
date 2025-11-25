@@ -10,9 +10,11 @@
   "dependencies": {
     "@yultyyev/better-auth-firestore": "^1.0.0",
     "better-auth": "^1.4.1",
+    "better-auth-firebase-auth": "^2.0.0",
     "firebase-admin": "^13.6.0",
     "hono": "^4.7.11",
-    "shared": "workspace:*"
+    "shared": "workspace:*",
+    "zod": "^4.1.5"
   },
   "devDependencies": {
     "@types/bun": "latest"

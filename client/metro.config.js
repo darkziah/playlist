@@ -1,5 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
-const { withNativeWind } = require('nativewind/metro');
+const { withUniwindConfig } = require('uniwind/metro');
 const path = require('path')
 
 const projectRoot = __dirname
@@ -23,5 +23,14 @@ module.exports = async () => {
     tailwindcss: path.resolve(projectRoot, 'node_modules', 'tailwindcss'),
   }
 
-  return withNativeWind(config, { input: './global.css', inlineRem: 16 });
+  return withUniwindConfig(config, {
+    // relative path to your global.css file
+    cssEntryFile: './global.css',
+    // generate type definitions for className usage
+    dtsFile: './uniwind-types.d.ts',
+    polyfills: {
+      // keep rem close to previous NativeWind inlineRem = 16
+      rem: 16,
+    },
+  });
 };
