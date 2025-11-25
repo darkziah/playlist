@@ -9,12 +9,15 @@ export default function SignIn() {
 
   const handleGoogleSignIn = async () => {
     try {
-        await authClient.signIn.social({
-            provider: "google",
-            callbackURL: "/" // Redirect to root which should handle auth check
-        });
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/", // Redirect to root which should handle auth check
+        // fetchOptions: {
+        //   credentials: "include",
+        // },
+      });
     } catch (e) {
-        console.error("Sign in failed", e);
+      console.error("Sign in failed", e);
     }
   };
 
